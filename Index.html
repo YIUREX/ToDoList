@@ -1,29 +1,202 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>To-Do List Minimalista</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mis Listas</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #f4f4f4;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 400px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .list-selector {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 15px;
+    }
+
+    .list-selector select,
+    .task-input input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .list-selector button,
+    .task-input button {
+      padding: 8px 10px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .task-input {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #eee;
+      padding: 10px;
+      margin-bottom: 5px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    li.completed span {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    li button {
+      background: transparent;
+      border: none;
+      color: red;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
+  <div class="app">
+    <h1>📝 Mis Listas</h1>
 
-    <div id="app-container">
-        <div class="header">
-            <h1>Mi Lista de Tareas</h1>
-            <p>Creada con la ayuda de Gemini</p>
-        </div>
-        <form id="task-form">
-            <input type="text" id="task-input" placeholder="¿Qué tienes pendiente?" autocomplete="off" required>
-            <button type="submit">+</button>
-        </form>
-        <ul id="task-list">
-            </ul>
+    <div class="list-selector">
+      <select id="listSelect"></select>
+      <button onclick="createNewList()">➕</button>
+      <button onclick="deleteCurrentList()">🗑️</button>
     </div>
 
-    <script src="script.js"></script>
+    <div class="task-input">
+      <input type="text" id="newTaskInput" placeholder="Nueva tarea...">
+      <button onclick="addTask()">Agregar</button>
+    </div>
+
+    <ul id="taskList"></ul>
+  </div>
+
+  <script>
+    let lists = JSON.parse(localStorage.getItem('taskLists')) || {};
+    let currentList = localStorage.getItem('currentList') || '';
+
+    const listSelect = document.getElementById('listSelect');
+    const taskList = document.getElementById('taskList');
+    const newTaskInput = document.getElementById('newTaskInput');
+
+    function save() {
+      localStorage.setItem('taskLists', JSON.stringify(lists));
+      localStorage.setItem('currentList', currentList);
+    }
+
+    function renderLists() {
+      listSelect.innerHTML = '';
+      for (let listName in lists) {
+        const option = document.createElement('option');
+        option.value = listName;
+        option.textContent = listName;
+        if (listName === currentList) option.selected = true;
+        listSelect.appendChild(option);
+      }
+    }
+
+    function renderTasks() {
+      taskList.innerHTML = '';
+      if (!currentList || !lists[currentList]) return;
+      lists[currentList].forEach((task, index) => {
+        const li = document.createElement('li');
+        if (task.done) li.classList.add('completed');
+
+        const span = document.createElement('span');
+        span.textContent = task.text;
+        span.onclick = () => {
+          task.done = !task.done;
+          save();
+          renderTasks();
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '✖';
+        delBtn.onclick = () => {
+          lists[currentList].splice(index, 1);
+          save();
+          renderTasks();
+        };
+
+        li.appendChild(span);
+        li.appendChild(delBtn);
+        taskList.appendChild(li);
+      });
+    }
+
+    function addTask() {
+      const text = newTaskInput.value.trim();
+      if (!text || !currentList) return;
+      lists[currentList].push({ text, done: false });
+      newTaskInput.value = '';
+      save();
+      renderTasks();
+    }
+
+    function createNewList() {
+      const name = prompt("Nombre de la nueva lista:");
+      if (!name || lists[name]) return;
+      lists[name] = [];
+      currentList = name;
+      save();
+      renderLists();
+      renderTasks();
+    }
+
+    function deleteCurrentList() {
+      if (!currentList) return;
+      if (confirm(`¿Eliminar la lista "${currentList}"?`)) {
+        delete lists[currentList];
+        currentList = Object.keys(lists)[0] || '';
+        save();
+        renderLists();
+        renderTasks();
+      }
+    }
+
+    listSelect.onchange = () => {
+      currentList = listSelect.value;
+      save();
+      renderTasks();
+    };
+
+    // Inicializar
+    renderLists();
+    renderTasks();
+  </script>
 </body>
 </html>
